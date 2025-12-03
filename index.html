@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的主页</title>
+    <!-- 引入 FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 保持之前的深色/亮色 CSS 样式，为了节省篇幅，这里引用核心样式 */
+        /* ... 请把上一个版本的 <style> 内容完整复制到这里 ... */
+        /* 下面只补充几个为了云同步新增的样式 */
+        
+        /* 管理员模式下的状态栏 */
+        .admin-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(10, 132, 255, 0.9); color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 0.8rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 2000; display: none; cursor: pointer;
+        }
+        
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3000;
+            display: flex; justify-content: center; align-items: center;
+            color: #fff; flex-direction: column; gap: 10px;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .loading-overlay.active { opacity: 1; pointer-events: auto; }
+
+        /* 暗门触发区 */
+        .secret-trigger {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+            z-index: 10; /* 比卡片低，但能点到空白处 */
+        }
+    </style>
+    <!-- 这里为了演示，我把上一版的 CSS 压缩嵌入，实际使用请粘贴完整的 -->
+    <style>
+        :root{--bg-color:#000;--card-bg:#1c1c1e;--text-main:#fff;--accent:#0a84ff}
+        body{background:var(--bg-color);color:var(--text-main);font-family:sans-serif;height:100vh;display:flex;justify-content:center;margin:0}
+        .app-container{width:100%;max-width:600px;height:100%;padding:20px;display:flex;flex-direction:column;position:relative}
+        .grid-wrapper{flex:1;overflow-y:auto;padding:5px} .grid-wrapper::-webkit-scrollbar{display:none}
+        .grid-system{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(100px,auto);gap:15px;padding-bottom:60px}
+        .grid-slot{aspect-ratio:1/1;border-radius:22px;position:relative}
+        .grid-slot.empty{border:1px dashed rgba(255,255,255,0.15);display:none} /* 默认隐藏空格子 */
+        .grid-slot.empty.admin-visible{display:flex;justify-content:center;align-items:center;cursor:pointer} /* 管理员可见 */
+        .grid-slot.empty::after{content:"+";font-size:1.5rem;color:#555}
+        .card{width:100%;height:100%;background:var(--card-bg);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;border:1px solid rgba(255,255,255,0.1)}
+        .card-icon{font-size:1.8rem;margin-bottom:8px} .card-text{font-size:0.8rem;color:#888}
+        .card-edit-btn{position:absolute;top:5px;right:5px;width:24px;height:24px;background:rgba(255,255,255,0.2);border-radius:50%;display:none;justify-content:center;align-items:center;font-size:0.7rem} /* 默认隐藏编辑按钮 */
+        body.admin-mode .card-edit-btn {display:flex;} /* 管理员可见 */
+        .profile-bar{height:60px;background:#1c1c1e;border-radius:50px;display:flex;align-items:center;padding:0 8px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.1)}
+        .avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#333} .avatar img{width:100%;height:100%}
+        .info{margin-left:12px} .name{font-weight:bold} .bio{font-size:0.7rem;color:#888}
+        /* 弹窗样式略...使用之前的即可 */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:0.2s;z-index:999}
+        .modal-overlay.active{opacity:1;pointer-events:auto}
+        .modal-box{background:#1c1c1e;width:80%;max-width:300px;padding:20px;border-radius:20px;display:flex;flex-direction:column;gap:10px}
+        input,select{background:#333;border:none;color:#fff;padding:10px;border-radius:8px}
+        button{padding:10px;border-radius:20px;border:none;cursor:pointer}
+    </style>
+</head>
+<body>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loading">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem"></i>
+        <span id="loadingText">正在同步...</span>
+    </div>
+
+    <!-- 管理员状态条 -->
+    <div class="admin-bar" id="adminBar" onclick="exitAdminMode()">
+        <i class="fa-solid fa-lock-open"></i> 管理员模式 (点击退出)
+    </div>
+
+    <div class="app-container">
+        <!-- 头部 -->
+        <div class="profile-bar" id="profileBar">
+            <div class="avatar"><img src="" id="displayAvatar"></div>
+            <div class="info">
+                <div class="name" id="displayName"></div>
+                <div class="bio" id="displayBio"></div>
+            </div>
+        </div>
+
+        <!-- 网格 -->
+        <div class="grid-wrapper">
+            <div class="grid-system" id="gridSystem">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 底部暗门触发区 (连续点击5次) -->
+        <div class="secret-trigger" id="secretTrigger"></div>
+    </div>
+
+    <!-- 弹窗部分（简化版，实际使用复制上一个版本的完整弹窗HTML） -->
+    <!-- 1. 编辑卡片 -->
+    <div class="modal-overlay" id="cardModal">
+        <div class="modal-box">
+            <h3>编辑卡片</h3>
+            <select id="cardType"><option value="link">链接</option><option value="weixin">微信</option></select>
+            <input id="cardTitle" placeholder="标题">
+            <input id="cardContent" placeholder="内容">
+            <button onclick="saveCard()" style="background:#fff;color:#000">保存</button>
+            <button onclick="closeModal('cardModal')" style="background:#333;color:#fff">取消</button>
+        </div>
+    </div>
+    
+    <!-- 2. 编辑资料 -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-box">
+            <h3>编辑资料</h3>
+            <input id="editName" placeholder="名字">
+            <input id="editBio" placeholder="简介">
+            <input id="editAvatar" placeholder="头像URL">
+            <button onclick="saveProfile()" style="background:#fff;color:#000">保存</button>
+            <button onclick="closeModal('profileModal')" style="background:#333;color:#fff">取消</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= 配置区 =================
+        // 如果你有 Gist ID，填在这里，否则使用 LocalStorage 演示
+        const GIST_ID = ''; // 你的 Gist ID
+        const GIST_FILENAME = 'my_home_data.json';
+        
+        // 默认数据
+        let appData = {
+            profile: { name: "游客", bio: "这里是只读模式", avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Felix" },
+            grid: Array(15).fill(null)
+        };
+        
+        let isAdmin = false; // 当前是否为管理员模式
+        let githubToken = localStorage.getItem('gh_token') || ''; // 读取本地存的Token
+
+        // ================= 核心逻辑 =================
+
+        async function init() {
+            showLoading(true, "正在加载数据...");
+            
+            // 1. 尝试从云端拉取数据 (如果有 Gist ID)
+            // 这里为了演示，我们先用 LocalStorage 模拟 "云端"
+            // 实际代码中，这里会 fetch(`https://api.github.com/gists/${GIST_ID}`)
+            const localData = localStorage.getItem('myHomeData_Cloud_Sim');
+            if(localData) {
+                appData = JSON.parse(localData);
+            }
+
+            renderAll();
+            showLoading(false);
+
+            // 绑定暗门事件
+            let clickCount = 0;
+            let timer;
+            document.getElementById('secretTrigger').addEventListener('click', () => {
+                clickCount++;
+                clearTimeout(timer);
+                timer = setTimeout(() => clickCount = 0, 1000); // 1秒内必须点完
+                if (clickCount === 5) {
+                    enterAdminFlow();
+                    clickCount = 0;
+                }
+            });
+        }
+
+        // --- 渲染 ---
+        function renderAll() {
+            // Profile
+            document.getElementById('displayName').textContent = appData.profile.name;
+            document.getElementById('displayBio').textContent = appData.profile.bio;
+            document.getElementById('displayAvatar').src = appData.profile.avatar;
+
+            // Grid
+            const container = document.getElementById('gridSystem');
+            container.innerHTML = '';
+            appData.grid.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = `grid-slot ${item ? '' : 'empty'}`;
+                
+                // 关键：根据 isAdmin 决定是否显示空格子
+                if (!item && isAdmin) {
+                    slot.classList.add('admin-visible');
+                    slot.onclick = () => openEditModal(index);
+                }
+
+                if (item) {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <i class="fa-solid fa-link card-icon"></i>
+                        <div class="card-text">${item.title}</div>
+                        <div class="card-edit-btn" onclick="openEditModal(${index}, event)">
+                            <i class="fa-solid fa-pen"></i>
+                        </div>
+                    `;
+                    // 只有管理员能拖拽
+                    if (isAdmin) card.draggable = true; 
+                    
+                    // 点击逻辑：管理员编辑，游客跳转
+                    card.onclick = () => {
+                        if(!isAdmin) {
+                            if(item.content.startsWith('http')) window.open(item.content);
+                            else alert('复制: ' + item.content);
+                        }
+                    };
+                    slot.appendChild(card);
+                }
+                container.appendChild(slot);
+            });
+
+            // Profile 点击逻辑
+            document.getElementById('profileBar').onclick = () => {
+                if(isAdmin) openProfileModal();
+            };
+        }
+
+        // --- 管理员流程 ---
+        function enterAdminFlow() {
+            const token = prompt("请输入管理密钥 (GitHub Token):", githubToken);
+            if (token) {
+                // 这里可以加一个简单的验证逻辑
+                if(token.length > 5) { // 简单模拟验证
+                    githubToken = token;
+                    localStorage.setItem('gh_token', token);
+                    enableAdminMode();
+                } else {
+                    alert("密钥无效");
+                }
+            }
+        }
+
+        function enableAdminMode() {
+            isAdmin = true;
+            document.body.classList.add('admin-mode');
+            document.getElementById('adminBar').style.display = 'block';
+            renderAll(); // 重新渲染，显示加号和编辑按钮
+            alert("已进入编辑模式，现在你可以修改内容了！");
+        }
+
+        function exitAdminMode() {
+            isAdmin = false;
+            document.body.classList.remove('admin-mode');
+            document.getElementById('adminBar').style.display = 'none';
+            renderAll();
+        }
+
+        // --- 数据保存 (模拟云同步) ---
+        async function syncData() {
+            showLoading(true, "正在同步到云端...");
+            
+            // 模拟网络请求延迟
+            await new Promise(r => setTimeout(r, 800));
+            
+            // 保存到本地模拟云端
+            localStorage.setItem('myHomeData_Cloud_Sim', JSON.stringify(appData));
+            
+            showLoading(false);
+            renderAll();
+        }
+
+        // --- 业务逻辑 (简化版) ---
+        let activeIndex = -1;
+        function openEditModal(index, e) {
+            if(e) e.stopPropagation();
+            activeIndex = index;
+            const item = appData.grid[index];
+            document.getElementById('cardTitle').value = item ? item.title : '';
+            document.getElementById('cardContent').value = item ? item.content : '';
+            openModal('cardModal');
+        }
+
+        function saveCard() {
+            appData.grid[activeIndex] = {
+                title: document.getElementById('cardTitle').value,
+                content: document.getElementById('cardContent').value,
+                type: 'link'
+            };
+            closeModal('cardModal');
+            syncData(); // 触发同步
+        }
+
+        function openProfileModal() {
+            document.getElementById('editName').value = appData.profile.name;
+            openModal('profileModal');
+        }
+        function saveProfile() {
+            appData.profile.name = document.getElementById('editName').value;
+            closeModal('profileModal');
+            syncData();
+        }
+
+        // UI 工具
+        function showLoading(show, text) {
+            const el = document.getElementById('loading');
+            document.getElementById('loadingText').innerText = text;
+            if(show) el.classList.add('active'); else el.classList.remove('active');
+        }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        init();
+    </script>
+</body>
+</html>
