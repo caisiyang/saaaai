@@ -1,767 +1,906 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的主页</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
+        /* ================= 基础变量 ================= */
         :root {
-            --bg-color: #000000;
-            --text-color: #ffffff;
-            --card-bg: #1c1c1e;
-            --card-hover: #2c2c2e;
-            --modal-bg: #1c1c1e;
-            --input-bg: #2c2c2e;
-            --accent-color: #0a84ff;
-            --danger-color: #ff453a;
+            --bg-color: #3a2e2e;
+            --text-main: #fff;
+            --text-sub: rgba(255, 255, 255, 0.7);
+            
+            /* 默认风格 */
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --card-border: 1px solid rgba(255, 255, 255, 0.15);
+            --card-blur: 25px;
+            
+            --slot-border: 2px dashed rgba(255, 255, 255, 0.15);
+            --modal-bg: rgba(30, 30, 30, 0.9);
+            --accent: #0a84ff;
+            --radius-card: 20px;
+            --gap-size: 12px; /* 稍微减小间距以适应手机 */
         }
 
-        body.light-mode {
-            --bg-color: #f2f2f7;
-            --text-color: #000000;
-            --card-bg: #ffffff;
-            --card-hover: #e5e5ea;
-            --modal-bg: #ffffff;
-            --input-bg: #e5e5ea;
-        }
+        /* 样式变体 */
+        body.style-dark { --card-bg: rgba(0, 0, 0, 0.5); --text-main: #fff; }
+        body.style-white { --card-bg: rgba(255, 255, 255, 0.8); --text-main: #000; --text-sub: rgba(0,0,0,0.6); --card-border: 1px solid rgba(0,0,0,0.1); }
+        body.no-border { --card-border: none; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        /* 滚动条隐藏但保留功能 */
+        ::-webkit-scrollbar { width: 0px; height: 0px; }
 
         body {
             background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            margin: 0;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
-            min-height: 100vh;
-            transition: background-color 0.3s, color 0.3s;
-            -webkit-font-smoothing: antialiased;
+            align-items: flex-start;
+            padding-top: 30px;
+            overflow-x: hidden;
+            /* 允许页面滚动，但在管理模式下我们会禁止卡片区域的默认滚动 */
+            overscroll-behavior-y: none; 
+            transition: background-image 0.5s ease;
         }
 
-        .container {
-            width: 600px;
-            max-width: 100%;
-            padding: 40px 20px;
-            box-sizing: border-box;
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px; /* 手机端减小边距 */
             display: flex;
             flex-direction: column;
-            align-items: center;
+            position: relative;
+            padding-bottom: 120px;
         }
 
-        /* Header / Profile */
+        @media (min-width: 600px) {
+            .app-container { padding: 20px; }
+            :root { --gap-size: 15px; --radius-card: 24px; }
+        }
+
+        /* --- 管理员控制条 --- */
+        .admin-controls {
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; display: flex; gap: 10px; pointer-events: none;
+        }
+        .admin-btn {
+            background: var(--accent); color: white; padding: 8px 20px;
+            border-radius: 30px; font-size: 0.85rem; font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer;
+            border: none; backdrop-filter: blur(10px);
+        }
+        .admin-btn.exit { background: rgba(0,0,0,0.6); }
+
+        /* --- 头部 --- */
         .header-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 40px;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .header-area:hover {
-            opacity: 0.8;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 0 2px;
         }
 
         .profile-bar {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex: 1; height: 72px;
+            background: var(--card-bg);
+            backdrop-filter: blur(var(--card-blur)); -webkit-backdrop-filter: blur(var(--card-blur));
+            border: var(--card-border); border-radius: 50px;
+            display: flex; align-items: center; padding: 0 10px;
+            margin-right: 10px; user-select: none;
+            transition: transform 0.1s;
         }
 
         .avatar {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background-color: var(--card-bg);
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(128,128,128,0.2); overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;
         }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .name {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-            letter-spacing: -0.5px;
+        .info { margin-left: 12px; flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+        .name { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
+        .bio { font-size: 0.8rem; color: var(--text-sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .settings-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: var(--card-bg); backdrop-filter: blur(var(--card-blur));
+            border: var(--card-border); color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; font-size: 1.3rem; transition: transform 0.2s;
         }
+        .settings-btn:active { transform: scale(0.9); }
 
-        .bio {
-            font-size: 15px;
-            opacity: 0.6;
-            margin: 0;
-            max-width: 400px;
-            line-height: 1.4;
-        }
-
-        /* Grid System */
-        #gridSystem {
+        /* --- 网格系统 (核心修复) --- */
+        .grid-system {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            width: 100%;
+            /* 这里的列数由 JS 动态写入内联样式 */
+            /* 关键：行高自动，基于 aspect-ratio 撑开 */
+            grid-auto-rows: auto; 
+            gap: var(--gap-size);
+            position: relative;
         }
 
         .grid-slot {
-            aspect-ratio: 1;
             position: relative;
-            border-radius: 22px;
+            border-radius: var(--radius-card);
+            /* 默认 1x1 的格子负责撑开行高 */
+            aspect-ratio: 1/1; 
         }
-
-        .grid-slot.wide {
-            grid-column: span 2;
+        
+        /* 跨格的 slot 不需要 aspect-ratio，它们跟随行高，只负责横向跨越 */
+        .grid-slot.span-h2, .grid-slot.span-h3, .grid-slot.span-h4, .grid-slot.span-h5 {
             aspect-ratio: auto;
-            height: 100%;
+            height: 100%; /* 填满行高 */
+        }
+        
+        .grid-slot.span-h2 { grid-column: span 2; }
+        .grid-slot.span-h3 { grid-column: span 3; }
+        .grid-slot.span-h4 { grid-column: span 4; }
+        .grid-slot.span-h5 { grid-column: span 5; }
+        
+        /* 纵向跨格 (2x2) - 高度翻倍加间距 */
+        .grid-slot.span-v2 { 
+            grid-row: span 2; 
+            aspect-ratio: auto; /* 高度由 grid track 决定 */
         }
 
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 22px;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .card:hover {
-            background-color: var(--card-hover);
-            transform: scale(1.03);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-        }
-
-        .card:active {
-            transform: scale(0.96);
-        }
-
-        .card-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-            color: var(--text-color);
-        }
-
-        .card-text {
-            font-size: 13px;
-            font-weight: 500;
-            text-align: center;
-            padding: 0 12px;
-            line-height: 1.3;
-            color: var(--text-color);
-        }
-
-        .card-edit-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            backdrop-filter: blur(4px);
-            transition: background 0.2s;
-            z-index: 2;
-        }
-
-        .card-edit-btn:hover {
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        /* Empty slot styling for admin */
+        /* 空格子逻辑 */
         .grid-slot.empty {
-            border: 2px dashed rgba(128, 128, 128, 0.3);
-            border-radius: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: border-color 0.2s;
+            border: var(--slot-border);
+            visibility: hidden; /* 默认不可见但占位 */
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; opacity: 0.4;
         }
+        .grid-slot.empty::after { content: "+"; font-size: 2rem; color: var(--text-main); }
+        
+        /* 管理员模式下可见 */
+        body.admin-mode .grid-slot.empty { visibility: visible; }
 
-        .grid-slot.empty:hover {
-            border-color: var(--accent-color);
-        }
-
-        .grid-slot.empty::after {
-            content: '+';
-            font-size: 32px;
-            color: rgba(128, 128, 128, 0.5);
-            font-weight: 300;
-        }
-
-        /* Modals */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            opacity: 1;
-        }
-
-        .modal {
-            background: var(--modal-bg);
-            padding: 24px;
-            border-radius: 24px;
-            width: 85%;
-            max-width: 360px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            transform: scale(0.95);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .modal-overlay.active .modal {
-            transform: scale(1);
-        }
-
-        .modal h2 {
-            margin: 0 0 20px 0;
-            font-size: 20px;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            opacity: 0.6;
-            margin-left: 4px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: none;
-            background: var(--input-bg);
-            color: var(--text-color);
-            box-sizing: border-box;
-            font-size: 16px;
-            outline: none;
-            transition: box-shadow 0.2s;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 2px var(--accent-color);
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 14px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 16px;
-            transition: opacity 0.2s;
-        }
-
-        .btn:active {
-            opacity: 0.7;
-        }
-
-        .btn-primary {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        /* Theme Toggle */
-        .theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+        /* --- 卡片核心 --- */
+        .card {
+            width: 100%; height: 100%;
             background: var(--card-bg);
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            backdrop-filter: blur(var(--card-blur)); -webkit-backdrop-filter: blur(var(--card-blur));
+            border: var(--card-border); border-radius: var(--radius-card);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; position: relative; z-index: 2; overflow: hidden;
+            /* 默认允许滚动 */
+            user-select: none; -webkit-user-select: none;
+            transition: transform 0.15s ease;
+        }
+        
+        /* 管理模式下的卡片：禁止默认触摸操作（如滚动），以便 JS 接管拖拽 */
+        body.admin-mode .card {
+            touch-action: none; 
+            cursor: grab;
+        }
+        
+        .card:active { transform: scale(0.96); }
+        
+        /* 拖拽状态 */
+        .card.dragging-active {
+            position: fixed; z-index: 9999; pointer-events: none;
+            transform: scale(1.05) rotate(2deg); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+            opacity: 0.95;
+        }
+        .card.dragging-placeholder { opacity: 0.2; background: rgba(0,0,0,0.1); border: 2px dashed rgba(255,255,255,0.2); }
+
+        /* 跨格卡片内部布局调整 */
+        .card.span-h { 
+            flex-direction: row; gap: 15px; padding: 0 20px; justify-content: flex-start; 
+        }
+        
+        /* 内容样式 - 响应式字体 */
+        /* 使用 container query 思想，卡片越小字越小 */
+        .card-icon { font-size: 1.8rem; margin-bottom: 8px; color: var(--text-main); pointer-events: none; }
+        .card-title { font-size: 0.75rem; color: var(--text-sub); pointer-events: none; font-weight: 500; }
+        .card-content { font-size: 0.9rem; color: var(--text-main); font-weight: 700; margin-top: 2px; display: none; pointer-events: none; word-break: break-all;}
+        
+        /* 横向卡片字体变大 */
+        .card.span-h .card-icon { font-size: 2rem; margin: 0; }
+        .card.span-h .card-text-box { text-align: left; overflow: hidden; }
+        .card.span-h .card-title { font-size: 0.85rem; }
+        .card.span-h .card-content { font-size: 1rem; }
+
+        .card-bg-img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .card.type-image { padding: 0; border: none; }
+        
+        .card.type-weixin .card-content, .card.type-text .card-content { display: block; }
+        .card.type-weixin .card-icon { font-size: 1.5rem; margin-bottom: 4px; }
+
+        /* 二维码遮罩 */
+        .qr-overlay {
+            position: absolute; inset: 0; background: #fff;
+            display: none; justify-content: center; align-items: center;
+            z-index: 10; animation: fadeIn 0.2s;
+        }
+        .qr-overlay.show { display: flex; }
+        .qr-img { width: 85%; height: 85%; object-fit: contain; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+        /* 编辑按钮 */
+        .card-edit-btn {
+            position: absolute; top: 6px; right: 6px; width: 28px; height: 28px;
+            background: rgba(0,0,0,0.6); border-radius: 50%; color: #fff;
+            display: none; justify-content: center; align-items: center;
+            font-size: 0.8rem; z-index: 20; cursor: pointer; backdrop-filter: blur(5px);
+        }
+        body.admin-mode .card .card-edit-btn { display: flex; }
+
+        /* --- 弹窗美化 --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center; z-index: 3000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-box {
+            background: var(--modal-bg); width: 90%; max-width: 380px;
+            border-radius: 28px; padding: 25px; border: 1px solid rgba(255,255,255,0.15);
+            max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
+            color: #fff; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        
+        .modal-section-title {
+            font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 10px; margin-bottom: 5px; font-weight: 700;
         }
 
-        .theme-toggle:active {
-            transform: scale(0.9);
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+        .form-input, .form-select {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff;
+            padding: 12px; border-radius: 12px; font-size: 1rem; width: 100%; outline: none;
+            transition: background 0.2s;
         }
+        .form-input:focus, .form-select:focus { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+        .form-select option { background-color: #222; color: #fff; padding: 10px; }
+        
+        .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 5px; border-radius: 2px; display: none; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 2px; transition: width 0.2s; }
 
-        /* Footer for secret door */
-        .footer-area {
-            height: 100px;
-            width: 100%;
-            margin-top: 40px;
-        }
+        .btn { padding: 14px; border-radius: 14px; border: none; font-weight: 600; cursor: pointer; width: 100%; font-size: 1rem; }
+        .btn-primary { background: var(--text-main); color: var(--bg-color); }
+        .btn-danger { background: rgba(255, 69, 58, 0.2); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); }
+        .btn-text { background: transparent; color: rgba(255,255,255,0.5); padding: 10px; font-size: 0.9rem; }
+        
+        input[type=range] { -webkit-appearance: none; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; background: #fff; border-radius: 50%; cursor: pointer; margin-top: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
     </style>
 </head>
-
 <body>
-    <div class="theme-toggle" onclick="toggleTheme()">
-        <i id="themeIcon" class="fa-solid fa-sun"></i>
+
+    <div class="admin-controls" id="adminControls" style="display:none;">
+        <button class="admin-btn">管理模式</button>
+        <button class="admin-btn exit" onclick="exitAdminFlow()">退出并保存</button>
     </div>
 
-    <div class="container">
+    <div class="app-container">
+        <!-- 头部 -->
         <div class="header-area">
             <div class="profile-bar">
-                <img id="displayAvatar" class="avatar" src="" alt="Avatar">
-                <div id="displayName" class="name"></div>
-                <div id="displayBio" class="bio"></div>
+                <div class="avatar"><img src="" id="displayAvatar"></div>
+                <div class="info">
+                    <div class="name" id="displayName"></div>
+                    <div class="bio" id="displayBio"></div>
+                </div>
             </div>
+            <div class="settings-btn" onclick="openSettings()"><i class="fa-solid fa-sliders"></i></div>
         </div>
 
-        <div id="gridSystem">
-            <!-- Grid items will be injected here -->
-        </div>
-
-        <div class="footer-area"></div>
+        <!-- 网格 -->
+        <div class="grid-system" id="gridSystem"></div>
     </div>
 
-    <!-- Card Modal -->
-    <div id="cardModal" class="modal-overlay">
-        <div class="modal">
-            <h2 id="cardModalTitle">编辑卡片</h2>
+    <!-- 1. 卡片编辑弹窗 -->
+    <div class="modal-overlay" id="cardModal">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 style="text-align:center;">卡片编辑</h3>
+            
             <div class="form-group">
-                <label>类型</label>
-                <select id="cardType" class="form-control">
-                    <option value="link">链接</option>
-                    <option value="weixin">微信</option>
+                <label class="form-label">功能类型</label>
+                <select id="cardType" class="form-select" onchange="toggleCardInputs()">
+                    <option value="link">链接跳转</option>
+                    <option value="weixin">微信 (支持二维码)</option>
+                    <option value="coffee">打赏/Buy Me a Coffee</option>
+                    <option value="image">纯图片</option>
+                    <option value="location">地理位置</option>
                     <option value="bilibili">B站</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="twitter">Twitter / X</option>
                     <option value="github">GitHub</option>
                     <option value="mail">邮箱</option>
-                    <option value="location">定位</option>
-                    <option value="text">纯文本</option>
+                    <option value="discord">Discord</option>
+                    <option value="telegram">Telegram</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="line">LINE</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="twitch">Twitch</option>
                 </select>
             </div>
+
             <div class="form-group">
-                <label>标题</label>
-                <input type="text" id="cardTitle" class="form-control" placeholder="例如：我的博客">
-            </div>
-            <div class="form-group">
-                <label>内容</label>
-                <input type="text" id="cardContent" class="form-control" placeholder="URL 或 文本">
-            </div>
-            <div class="form-group">
-                <label>宽度</label>
-                <select id="cardWidth" class="form-control">
-                    <option value="1">1x1 (正方形)</option>
-                    <option value="2">2x1 (宽卡片)</option>
+                <label class="form-label">卡片尺寸</label>
+                <select id="cardSpan" class="form-select">
+                    <option value="1x1">1x1 (正方形)</option>
+                    <option value="h2">横跨 2格</option>
+                    <option value="h3">横跨 3格</option>
+                    <option value="h4">横跨 4格</option>
+                    <option value="h5">横跨 5格</option>
+                    <option value="v2">纵向 2格</option>
                 </select>
             </div>
-            <div class="btn-group">
-                <button id="btnDelete" class="btn btn-danger" onclick="deleteCard()">删除</button>
-                <button class="btn btn-primary btn-confirm" onclick="saveCard()">保存</button>
+
+            <div class="form-group" id="inputTitleGroup">
+                <label class="form-label">标题</label>
+                <input type="text" id="cardTitle" class="form-input" placeholder="显示名称">
             </div>
+
+            <div class="form-group" id="inputContentGroup">
+                <label class="form-label">链接 / 内容</label>
+                <input type="text" id="cardContent" class="form-input" placeholder="https://...">
+            </div>
+
+            <div class="form-group" id="inputImageGroup" style="display:none;">
+                <label class="form-label">上传图片</label>
+                <input type="file" id="cardImageFile" accept="image/*" class="form-input">
+                <div class="progress-bar" id="imgProgress"><div class="progress-fill"></div></div>
+                <input type="hidden" id="cardImageUrl">
+            </div>
+
+            <div class="form-group" id="inputQrGroup" style="display:none;">
+                <label class="form-label">上传二维码</label>
+                <input type="file" id="cardQrFile" accept="image/*" class="form-input">
+                <div class="progress-bar" id="qrProgress"><div class="progress-fill"></div></div>
+                <input type="hidden" id="cardQrUrl">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-danger" id="btnDelete" onclick="deleteCard()">删除</button>
+                <button class="btn btn-primary" onclick="saveCard()">保存</button>
+            </div>
+            <button class="btn btn-text" onclick="closeModal('cardModal')">取消</button>
         </div>
     </div>
 
-    <!-- Profile Modal -->
-    <div id="profileModal" class="modal-overlay">
-        <div class="modal">
-            <h2>编辑资料</h2>
+    <!-- 2. 全局设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box">
+            <h3 style="text-align:center;">设置</h3>
+            
+            <div class="modal-section-title">个人资料</div>
             <div class="form-group">
-                <label>昵称</label>
-                <input type="text" id="editName" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>简介</label>
-                <input type="text" id="editBio" class="form-control">
+                <input type="text" id="editName" class="form-input" placeholder="名字">
+                <input type="text" id="editBio" class="form-input" placeholder="简介">
             </div>
             <div class="form-group">
-                <label>头像链接</label>
-                <input type="text" id="editAvatar" class="form-control">
+                <label class="form-label" style="display:flex; justify-content:space-between;">头像 <span>点击选择文件</span></label>
+                <input type="file" id="avatarFile" accept="image/*" class="form-input">
+                <input type="hidden" id="editAvatar">
             </div>
-            <div class="btn-group">
-                <button class="btn btn-primary btn-confirm" onclick="saveProfile()">保存</button>
+
+            <div class="modal-section-title">外观风格</div>
+            <div class="form-group">
+                <select id="styleSelect" class="form-select">
+                    <option value="transparent">透明毛玻璃</option>
+                    <option value="dark">深色遮罩</option>
+                    <option value="white">浅色遮罩</option>
+                </select>
+                <select id="borderSelect" class="form-select">
+                    <option value="show">显示卡片边框</option>
+                    <option value="hide">隐藏卡片边框</option>
+                </select>
             </div>
+
+            <div class="form-group">
+                <label class="form-label">背景图片</label>
+                <input type="file" id="bgFile" accept="image/*" class="form-input">
+                <div class="progress-bar" id="bgProgress"><div class="progress-fill"></div></div>
+                <input type="hidden" id="editBg">
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <input type="color" id="bgColorPicker" style="height:35px; width:50px; padding:0; border:none; border-radius:5px;" value="#2c2c2e">
+                    <button class="btn" style="padding:5px; font-size:0.8rem; background:rgba(255,255,255,0.1); width:auto; flex:1;" onclick="clearBg()">清除图片使用纯色</button>
+                </div>
+            </div>
+
+            <div class="modal-section-title">布局</div>
+            <div class="form-group">
+                <label class="form-label">一行 <span id="colVal">3</span> 列</label>
+                <input type="range" id="colRange" min="2" max="5" step="1" style="width:100%" oninput="updateColPreview(this.value)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">总格数: <span id="gridTotalVal">15</span></label>
+                <input type="range" id="totalRange" min="9" max="60" step="3" style="width:100%" oninput="updateTotalPreview(this.value)">
+            </div>
+
+            <div id="authArea" style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                <button class="btn" style="background:#0a84ff; color:#fff" onclick="enterAdminFlow()">验证 Token 进入管理模式</button>
+            </div>
+
+            <button class="btn btn-primary" id="saveSettingsBtn" style="display:none;" onclick="saveSettings()">保存修改</button>
+            <button class="btn btn-text" onclick="closeModal('settingsModal')">关闭</button>
         </div>
     </div>
 
     <script>
         // ================= 配置区 =================
-        // 1. 请在这里填入你的 Gist ID (就是 gist 网址最后那串数字字母)
-        const GIST_ID = 'b9e8463f5dc1966839dc2f675bfabffe';
-
-        // 2. Gist 里的文件名 (之前让你填的是 data.json)
+        const GIST_ID = 'b9e8463f5dc1966839dc2f675bfabffe'; 
+        const REPO_OWNER = 'caisiyang';
+        const REPO_NAME = 'saaaai';
         const GIST_FILENAME = 'data.json';
 
-        // 3. 你的 GitHub Token (平时存在本地，只有编辑时才需要)
-        // 手机上看不需要这个 Token，只有你要在手机上改数据时才需要输入
-        let githubToken = localStorage.getItem('gh_token') || '';
-
-        // 默认数据（万一云端被清空了用这个垫底）
+        // ================= 状态 =================
         let appData = {
-            profile: { name: "加载中...", bio: "正在从云端同步...", avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Felix" },
+            config: { gridColumns: 3, gridSize: 15, bgImage: "", bgColor: "#3a2e2e", cardStyle: "transparent", hideBorder: false },
+            profile: { name: "加载中...", bio: "...", avatar: "" },
             grid: Array(15).fill(null)
         };
-
+        
+        let githubToken = localStorage.getItem('gh_token') || '';
         let isAdmin = false;
         let activeSlotIndex = -1;
+        
+        // 拖拽变量
+        let isDragging = false;
+        let dragStartIndex = -1;
+        let dragGhost = null;
+        let touchOffsetX = 0;
+        let touchOffsetY = 0;
+
         const iconMap = {
-            link: "fa-solid fa-link", weixin: "fa-brands fa-weixin", location: "fa-solid fa-location-dot",
-            bilibili: "fa-brands fa-bilibili", github: "fa-brands fa-github", mail: "fa-solid fa-envelope",
-            text: "fa-solid fa-align-left"
+            link: "fa-solid fa-link", 
+            weixin: "fa-brands fa-weixin", 
+            coffee: "fa-solid fa-mug-hot",
+            location: "fa-solid fa-location-dot",
+            bilibili: "fa-brands fa-bilibili", 
+            github: "fa-brands fa-github", 
+            mail: "fa-solid fa-envelope",
+            image: "fa-regular fa-image",
+            youtube: "fa-brands fa-youtube",
+            instagram: "fa-brands fa-instagram",
+            tiktok: "fa-brands fa-tiktok",
+            twitter: "fa-brands fa-x-twitter",
+            discord: "fa-brands fa-discord",
+            telegram: "fa-brands fa-telegram",
+            whatsapp: "fa-brands fa-whatsapp",
+            line: "fa-brands fa-line",
+            facebook: "fa-brands fa-facebook",
+            twitch: "fa-brands fa-twitch"
         };
 
-        // ================= 核心：真·云端同步逻辑 =================
-
+        // ================= 初始化 =================
         async function init() {
-            applyTheme();
-
-            // 页面一打开，立刻去 GitHub 拉取最新数据
             await loadFromCloud();
-
-            // 绑定暗门 (底部连点5次)
-            let clickCount = 0;
-            let timer;
-            // 绑定到 body 或者特定区域，防止有些布局挡住
-            document.addEventListener('click', (e) => {
-                // 只有点击页面底部 10% 的区域才算暗门，防止误触
-                // 修改：点击页面下半部分 (50%) 即可触发，面积更大
-                if (e.clientY > window.innerHeight * 0.5) {
-                    clickCount++;
-                    clearTimeout(timer);
-                    // 修改：放宽时间限制到 2秒，防止手速慢断掉
-                    timer = setTimeout(() => clickCount = 0, 2000);
-                    if (clickCount === 5) {
-                        enterAdminFlow();
-                        clickCount = 0;
-                    }
-                }
-            });
-        }
-
-        // 1. 从云端读取 (所有人都用这个)
-        async function loadFromCloud() {
-            if (!GIST_ID || GIST_ID === '你的_GIST_ID_填在这里') {
-                alert("请在代码中填入正确的 GIST_ID！");
-                renderAll(); // 渲染默认数据
-                return;
-            }
-
-            try {
-                // 发送请求给 GitHub
-                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-                if (!response.ok) throw new Error("网络请求失败");
-
-                const data = await response.json();
-                // 解析文件内容
-                const content = data.files[GIST_FILENAME].content;
-
-                // 更新 appData
-                appData = JSON.parse(content);
-                console.log("云端数据同步成功！");
-
-            } catch (error) {
-                console.error("同步失败，加载本地缓存或默认数据", error);
-                // 如果断网了，尝试读取本地作为备份
-                const localBackup = localStorage.getItem('myHomeBackup');
-                if (localBackup) appData = JSON.parse(localBackup);
-            }
-
+            applyStyles();
             renderAll();
+            setupEvents();
         }
 
-        // 2. 保存到云端 (只有管理员用这个)
-        async function saveToCloud() {
-            if (!isAdmin || !githubToken) {
-                alert("没有权限保存，请先进入管理员模式");
-                return;
-            }
-
-            // 先保存一份到本地做备份，防止网不好丢数据
-            localStorage.setItem('myHomeBackup', JSON.stringify(appData));
-
-            const btnText = document.querySelector('.modal-overlay.active .btn-confirm');
-            if (btnText) btnText.innerText = "正在上传...";
-
+        async function loadFromCloud() {
             try {
-                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `token ${githubToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        files: {
-                            [GIST_FILENAME]: {
-                                content: JSON.stringify(appData)
-                            }
-                        }
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error("保存失败，请检查 Token 或网络");
+                const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+                if (!res.ok) throw new Error("Gist Error");
+                const data = await res.json();
+                const content = JSON.parse(data.files[GIST_FILENAME].content);
+                appData = { ...appData, ...content };
+                syncGridSize(appData.config.gridSize || 15);
+                localStorage.setItem('myHomeBackup', JSON.stringify(appData));
+            } catch (e) {
+                const local = localStorage.getItem('myHomeBackup');
+                if (local) {
+                    appData = JSON.parse(local);
+                    syncGridSize(appData.config.gridSize);
                 }
-
-                alert("保存成功！全网已同步。");
-
-            } catch (error) {
-                alert("保存出错: " + error.message);
-            } finally {
-                if (btnText) btnText.innerText = "保存";
             }
         }
 
-        // ================= 渲染与逻辑 (保持不变) =================
+        function syncGridSize(targetSize) {
+            if (!appData.grid) appData.grid = [];
+            if (appData.grid.length !== targetSize) {
+                const newGrid = Array(targetSize).fill(null);
+                appData.grid.forEach((item, i) => { if(i < targetSize) newGrid[i] = item; });
+                appData.grid = newGrid;
+            }
+        }
+
+        async function saveToCloud() {
+            localStorage.setItem('myHomeBackup', JSON.stringify(appData)); // 立即存本地
+            if (!isAdmin || !githubToken) return;
+            try {
+                await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(appData) } } })
+                });
+            } catch(e) { console.error("Cloud save error"); }
+        }
+
+        // ================= 渲染系统 =================
+        function applyStyles() {
+            if (appData.config.bgImage && appData.config.bgImage.trim() !== "") {
+                document.body.style.backgroundImage = `url('${appData.config.bgImage}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = appData.config.bgColor || "#3a2e2e";
+            }
+            
+            // 设置列数
+            document.getElementById('gridSystem').style.gridTemplateColumns = `repeat(${appData.config.gridColumns || 3}, 1fr)`;
+            
+            document.body.classList.remove('style-white', 'style-dark', 'no-border');
+            if (appData.config.cardStyle === 'white') document.body.classList.add('style-white');
+            if (appData.config.cardStyle === 'dark') document.body.classList.add('style-dark');
+            if (appData.config.hideBorder) document.body.classList.add('no-border');
+        }
 
         function renderAll() {
-            renderProfile();
-            renderGrid();
-        }
-
-        function renderProfile() {
             document.getElementById('displayName').textContent = appData.profile.name;
             document.getElementById('displayBio').textContent = appData.profile.bio;
-            document.getElementById('displayAvatar').src = appData.profile.avatar;
-        }
+            if(appData.profile.avatar) document.getElementById('displayAvatar').src = appData.profile.avatar;
 
-        function renderGrid() {
             const container = document.getElementById('gridSystem');
             container.innerHTML = '';
 
             appData.grid.forEach((item, index) => {
                 const slot = document.createElement('div');
                 slot.className = 'grid-slot';
-                // 只有管理员能看到空格子
-                if (!item) {
-                    slot.className += ' empty';
-                    if (isAdmin) {
-                        slot.style.display = 'flex'; // 管理员显示空格
-                        slot.onclick = () => openAddModal(index);
-                    } else {
-                        slot.style.display = 'none'; // 游客隐藏空格
-                    }
-                }
-
-                // 允许拖拽 (仅管理员)
-                if (isAdmin) {
-                    slot.ondragover = (e) => e.preventDefault();
-                    slot.ondrop = (e) => handleDrop(e, index);
-                }
+                slot.dataset.index = index;
 
                 if (item) {
-                    if (item.width === "2") {
-                        slot.classList.add('wide');
-                        slot.style.gridColumn = "span 2";
+                    // 添加跨格类，横向跨格卡片会自动变成 flex-row 布局
+                    if (item.span && item.span !== '1x1') {
+                        slot.classList.add(`span-${item.span}`);
                     }
+                    
                     const card = document.createElement('div');
-                    card.className = `card ${item.width === "2" ? 'wide' : ''}`;
-                    if (isAdmin) card.draggable = true;
-
-                    card.innerHTML = `
-                <i class="${iconMap[item.type]} card-icon"></i>
-                <div class="card-text">${item.title}</div>
-                ${isAdmin ? `<div class="card-edit-btn" onclick="openEditModal(${index}, event)"><i class="fa-solid fa-pen"></i></div>`
-                            : ''}
-            `;
-
-                    // 点击事件：管理员没反应(靠编辑按钮)，游客跳转
-                    card.onclick = () => {
-                        if (!isAdmin) handleCardClick(item);
-                    };
-
-                    if (isAdmin) {
-                        card.ondragstart = (e) => {
-                            e.dataTransfer.setData('text/idx', index);
-                            card.classList.add('dragging');
-                        };
-                        card.ondragend = () => card.classList.remove('dragging');
+                    // 标记是否为横向长卡片
+                    const isHorizontal = item.span && item.span.startsWith('h');
+                    card.className = `card type-${item.type} ${item.span ? `span-${item.span}` : ''} ${isHorizontal ? 'span-h' : ''}`;
+                    
+                    let html = '';
+                    if ((item.type === 'weixin' || item.type === 'coffee') && item.qrCode) {
+                        html += `<div class="qr-overlay"><img src="${item.qrCode}" class="qr-img"></div>`;
                     }
 
+                    if (item.type === 'image') {
+                        html += `<img src="${item.content}" class="card-bg-img">`;
+                    } else if (item.type === 'location' && item.span !== '1x1') {
+                        html += `<i class="fa-solid fa-map-location-dot" style="font-size:3rem; opacity:0.3;"></i>
+                                <div style="position:absolute; bottom:10px; font-weight:bold">${item.title}</div>`;
+                    } else {
+                        html += `<i class="${iconMap[item.type] || 'fa-solid fa-link'} card-icon"></i>
+                                <div class="card-text-box" style="text-align:center">
+                                    <div class="card-title">${item.title}</div>
+                                    <div class="card-content">${item.content}</div>
+                                </div>`;
+                    }
+                    
+                    html += `<div class="card-edit-btn" onclick="openEditModal(${index}, false, event)"><i class="fa-solid fa-pen"></i></div>`;
+                    
+                    card.innerHTML = html;
+                    bindCardEvents(card, index, item);
                     slot.appendChild(card);
+                } else {
+                    slot.classList.add('empty');
+                    if(isAdmin) slot.onclick = () => openEditModal(index, true);
                 }
                 container.appendChild(slot);
             });
-
-            // 个人信息编辑
-            document.querySelector('.header-area').onclick = (e) => {
-                // 只有点到头像或文字区域才触发，且必须是管理员
-                if (isAdmin && e.target.closest('.profile-bar')) {
-                    openProfileModal();
-                }
-            };
         }
 
-        // --- 业务操作 ---
-
-        // 保存卡片 (统一入口)
-        function saveCard() {
-            const newItem = {
-                type: document.getElementById('cardType').value,
-                title: document.getElementById('cardTitle').value || "未命名",
-                content: document.getElementById('cardContent').value,
-                width: document.getElementById('cardWidth').value
-            };
-            appData.grid[activeSlotIndex] = newItem;
-            closeModal('cardModal');
-            renderAll(); // 先在本地渲染
-            saveToCloud(); // 然后发给服务器
-        }
-
-        function deleteCard() {
-            if (confirm("确定删除？")) {
-                appData.grid[activeSlotIndex] = null;
-                closeModal('cardModal');
-                renderAll();
-                saveToCloud();
+        // ================= 交互与事件 =================
+        function bindCardEvents(card, index, item) {
+            if (!isAdmin) {
+                card.onclick = () => handleCardClick(card, item);
+                return;
             }
+            card.onmousedown = (e) => startDrag(e, index, card, false);
+            card.ontouchstart = (e) => startDrag(e, index, card, true);
         }
 
-        function saveProfile() {
-            appData.profile.name = document.getElementById('editName').value;
-            appData.profile.bio = document.getElementById('editBio').value;
-            appData.profile.avatar = document.getElementById('editAvatar').value;
-            closeModal('profileModal');
-            renderAll();
-            saveToCloud();
-        }
-
-        // 拖拽交换
-        function handleDrop(e, targetIndex) {
-            e.preventDefault();
-            const sourceIndex = parseInt(e.dataTransfer.getData('text/idx'));
-            if (sourceIndex === targetIndex) return;
-            const sourceItem = appData.grid[sourceIndex];
-            appData.grid[sourceIndex] = appData.grid[targetIndex];
-            appData.grid[targetIndex] = sourceItem;
-            renderAll();
-            saveToCloud(); // 拖拽完自动保存
-        }
-
-        // --- 权限管理 ---
-        function enterAdminFlow() {
-            if (isAdmin) {
-                // 如果已经是管理员，再次触发暗门则退出
-                isAdmin = false;
-                document.body.classList.remove('light-mode'); // 示意退出
-                alert("已退出管理员模式");
-                renderAll();
+        function handleCardClick(cardEl, item) {
+            const isLink = ['link', 'bilibili', 'github', 'youtube', 'instagram', 'tiktok', 'twitter', 'discord', 'telegram', 'facebook', 'twitch'].includes(item.type);
+            
+            if (isLink) {
+                if (item.content.startsWith('http')) window.open(item.content, '_blank');
+                else alert("无效链接，请以 http 开头");
+                return;
+            }
+            
+            if (item.type === 'weixin' || item.type === 'coffee') {
+                if (item.qrCode) {
+                    const overlay = cardEl.querySelector('.qr-overlay');
+                    if(overlay) overlay.style.display = (overlay.style.display === 'flex') ? 'none' : 'flex';
+                } else {
+                    if(item.type === 'weixin') {
+                        navigator.clipboard.writeText(item.content);
+                        alert("已复制: " + item.content);
+                    } else {
+                        if(item.content.startsWith('http')) window.open(item.content, '_blank');
+                    }
+                }
                 return;
             }
 
-            const token = prompt("请输入 GitHub Token 以编辑:", githubToken);
-            if (token) {
-                githubToken = token;
-                localStorage.setItem('gh_token', token); // 记住密码
-                isAdmin = true;
-                renderAll();
-                alert("管理员模式已开启！你可以编辑、拖拽了。");
-            }
-        }
+            if (item.type === 'mail') { window.location.href = `mailto:${item.content}`; return; }
+            if (item.type === 'whatsapp') { window.open(`https://wa.me/${item.content}`, '_blank'); return; }
+            if (item.type === 'line') { window.open(`https://line.me/ti/p/~${item.content}`, '_blank'); return; }
 
-        function handleCardClick(item) {
-            if (item.type === 'weixin' || item.type === 'text') {
+            if (item.content) {
                 navigator.clipboard.writeText(item.content);
-                alert("已复制: " + item.content);
-            } else if (item.content.startsWith('http')) {
-                window.open(item.content, '_blank');
-            } else {
-                alert(item.content);
+                alert("已复制");
             }
         }
 
-        // --- UI 工具 ---
-        function openAddModal(index) {
-            activeSlotIndex = index;
-            document.getElementById('cardModalTitle').textContent = "添加";
-            document.getElementById('cardTitle').value = "";
-            document.getElementById('cardContent').value = "";
-            document.getElementById('btnDelete').style.display = "none";
-            openModal('cardModal');
-        }
-        function openEditModal(index, e) {
-            e.stopPropagation();
-            activeSlotIndex = index;
-            const item = appData.grid[index];
-            document.getElementById('cardModalTitle').textContent = "编辑";
-            document.getElementById('cardTitle').value = item.title;
-            document.getElementById('cardContent').value = item.content;
-            document.getElementById('cardType').value = item.type;
-            document.getElementById('cardWidth').value = item.width || "1";
-            document.getElementById('btnDelete').style.display = "block";
-            openModal('cardModal');
+        // ================= 拖拽逻辑 =================
+        function startDrag(e, index, cardEl, isTouch) {
+            if (e.target.closest('.card-edit-btn')) return;
+            isDragging = true; dragStartIndex = index;
+            
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+            const rect = cardEl.getBoundingClientRect();
+            touchOffsetX = clientX - rect.left;
+            touchOffsetY = clientY - rect.top;
+
+            dragGhost = cardEl.cloneNode(true);
+            dragGhost.classList.add('dragging-active');
+            dragGhost.style.width = rect.width + 'px';
+            dragGhost.style.height = rect.height + 'px';
+            document.body.appendChild(dragGhost);
+            cardEl.classList.add('dragging-placeholder');
+
+            if (isTouch) {
+                document.ontouchmove = (ev) => onMove(ev, true);
+                document.ontouchend = (ev) => onEnd(ev, true);
+            } else {
+                document.onmousemove = (ev) => onMove(ev, false);
+                document.onmouseup = (ev) => onEnd(ev, false);
+            }
+            updateGhostPos(clientX, clientY);
         }
 
-        function openProfileModal() {
+        function onMove(e, isTouch) {
+            if (!isDragging) return;
+            if(e.cancelable) e.preventDefault(); 
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+            updateGhostPos(clientX, clientY);
+        }
+
+        function updateGhostPos(x, y) {
+            if(dragGhost) {
+                dragGhost.style.left = (x - touchOffsetX) + 'px';
+                dragGhost.style.top = (y - touchOffsetY) + 'px';
+            }
+        }
+
+        function onEnd(e, isTouch) {
+            if (!isDragging) return;
+            isDragging = false;
+            let clientX = isTouch ? e.changedTouches[0].clientX : e.clientX;
+            let clientY = isTouch ? e.changedTouches[0].clientY : e.clientY;
+
+            if (dragGhost) dragGhost.remove();
+            dragGhost = null;
+            document.ontouchmove = null; document.ontouchend = null;
+            document.onmousemove = null; document.onmouseup = null;
+
+            let targetEl = document.elementFromPoint(clientX, clientY);
+            let slot = targetEl ? targetEl.closest('.grid-slot') : null;
+
+            if (slot) {
+                const targetIndex = parseInt(slot.dataset.index);
+                if (targetIndex !== dragStartIndex && !isNaN(targetIndex)) {
+                    const temp = appData.grid[dragStartIndex];
+                    appData.grid[dragStartIndex] = appData.grid[targetIndex];
+                    appData.grid[targetIndex] = temp;
+                    renderAll();
+                    saveToCloud(); 
+                    return;
+                }
+            }
+            renderAll(); 
+        }
+
+        // ================= 设置与管理 =================
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.add('active');
+            
             document.getElementById('editName').value = appData.profile.name;
             document.getElementById('editBio').value = appData.profile.bio;
-            document.getElementById('editAvatar').value = appData.profile.avatar;
-            openModal('profileModal');
+            document.getElementById('colRange').value = appData.config.gridColumns || 3;
+            document.getElementById('colVal').innerText = appData.config.gridColumns || 3;
+            document.getElementById('totalRange').value = appData.config.gridSize || 15;
+            document.getElementById('gridTotalVal').innerText = appData.config.gridSize || 15;
+            document.getElementById('styleSelect').value = appData.config.cardStyle || 'transparent';
+            document.getElementById('borderSelect').value = appData.config.hideBorder ? 'hide' : 'show';
+            document.getElementById('editBg').value = appData.config.bgImage || "";
+            document.getElementById('bgColorPicker').value = appData.config.bgColor || "#3a2e2e";
+
+            updateAuthUI();
         }
 
-        function toggleTheme() {
-            const body = document.body;
-            const icon = document.getElementById('themeIcon');
-            if (body.classList.contains('light-mode')) {
-                body.classList.remove('light-mode');
-                icon.className = 'fa-solid fa-sun';
-                appData.theme = 'dark';
-            } else {
-                body.classList.add('light-mode');
-                icon.className = 'fa-solid fa-moon';
-                appData.theme = 'light';
+        function clearBg() {
+            document.getElementById('bgFile').value = "";
+            document.getElementById('editBg').value = "";
+            alert("背景图片已清除");
+        }
+
+        async function saveSettings() {
+            if(!isAdmin) return;
+
+            const avaUrl = await uploadFileToGitHub('avatarFile');
+            if(avaUrl) appData.profile.avatar = avaUrl;
+
+            const bgFileUrl = await uploadFileToGitHub('bgFile', 'bgProgress');
+            if (bgFileUrl) appData.config.bgImage = bgFileUrl;
+            else appData.config.bgImage = document.getElementById('editBg').value;
+
+            appData.config.bgColor = document.getElementById('bgColorPicker').value;
+            appData.profile.name = document.getElementById('editName').value;
+            appData.profile.bio = document.getElementById('editBio').value;
+            appData.config.gridColumns = parseInt(document.getElementById('colRange').value);
+            appData.config.cardStyle = document.getElementById('styleSelect').value;
+            appData.config.hideBorder = document.getElementById('borderSelect').value === 'hide';
+
+            const newSize = parseInt(document.getElementById('totalRange').value);
+            syncGridSize(newSize);
+            appData.config.gridSize = newSize;
+
+            saveToCloud();
+            applyStyles();
+            renderAll();
+            closeModal('settingsModal');
+        }
+
+        function enterAdminFlow() {
+            const token = prompt("GitHub Token:", githubToken);
+            if(token) {
+                githubToken = token;
+                localStorage.setItem('gh_token', token);
+                isAdmin = true;
+                document.body.classList.add('admin-mode');
+                document.getElementById('adminControls').style.display = 'flex';
+                updateAuthUI();
+                renderAll();
             }
-            // 主题偏好存本地即可，不必强行存云端，或者你也存云端：
-            // saveToCloud();
-        }
-        function applyTheme() {
-            // 简单处理：默认暗色，不做持久化读取了，让用户自己点
         }
 
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function exitAdminFlow() {
+            isAdmin = false;
+            document.body.classList.remove('admin-mode');
+            document.getElementById('adminControls').style.display = 'none';
+            renderAll();
+        }
 
-        document.querySelectorAll('.modal-overlay').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (e.target === el) el.classList.remove('active');
+        function updateAuthUI() {
+            const btn = document.getElementById('saveSettingsBtn');
+            const authArea = document.getElementById('authArea');
+            if (isAdmin) { btn.style.display = 'block'; authArea.style.display = 'none'; } 
+            else { btn.style.display = 'none'; authArea.style.display = 'block'; }
+        }
+
+        function openEditModal(index, isNew, e) {
+            if(e) e.stopPropagation();
+            activeSlotIndex = index;
+            const item = appData.grid[index];
+            
+            document.getElementById('cardImageFile').value = '';
+            document.getElementById('cardQrFile').value = ''; 
+            document.getElementById('imgProgress').style.display = 'none';
+            document.getElementById('qrProgress').style.display = 'none';
+            document.getElementById('btnDelete').style.display = isNew ? 'none' : 'block';
+
+            if (isNew) {
+                document.getElementById('cardType').value = 'link';
+                document.getElementById('cardTitle').value = '';
+                document.getElementById('cardContent').value = '';
+                document.getElementById('cardSpan').value = '1x1';
+            } else {
+                document.getElementById('cardType').value = item.type;
+                document.getElementById('cardTitle').value = item.title;
+                document.getElementById('cardContent').value = item.content;
+                document.getElementById('cardSpan').value = item.span || '1x1';
+                if(item.type==='image') document.getElementById('cardImageUrl').value = item.content;
+                if(item.type==='weixin' || item.type==='coffee') document.getElementById('cardQrUrl').value = item.qrCode || "";
+            }
+            toggleCardInputs();
+            document.getElementById('cardModal').classList.add('active');
+        }
+
+        function toggleCardInputs() {
+            const type = document.getElementById('cardType').value;
+            document.getElementById('inputImageGroup').style.display = (type === 'image') ? 'block' : 'none';
+            document.getElementById('inputQrGroup').style.display = (type === 'weixin' || type === 'coffee') ? 'block' : 'none';
+            document.getElementById('inputContentGroup').style.display = (type === 'image') ? 'none' : 'block';
+            
+            let ph = "https://...";
+            if(type==='weixin') ph = "微信号";
+            if(type==='mail') ph = "example@mail.com";
+            if(type==='coffee') ph = "链接 (可选)";
+            document.getElementById('cardContent').placeholder = ph;
+        }
+
+        async function saveCard() {
+            const type = document.getElementById('cardType').value;
+            let content = document.getElementById('cardContent').value;
+            let qrCode = "";
+
+            if (type === 'image') {
+                const url = await uploadFileToGitHub('cardImageFile', 'imgProgress');
+                if(url) content = url;
+                else content = document.getElementById('cardImageUrl').value;
+            }
+            
+            if (type === 'weixin' || type === 'coffee') {
+                const url = await uploadFileToGitHub('cardQrFile', 'qrProgress');
+                if(url) qrCode = url;
+                else qrCode = document.getElementById('cardQrUrl').value;
+            }
+
+            appData.grid[activeSlotIndex] = {
+                type: type,
+                title: document.getElementById('cardTitle').value,
+                content: content,
+                qrCode: qrCode,
+                span: document.getElementById('cardSpan').value
+            };
+            saveToCloud();
+            renderAll();
+            closeModal('cardModal');
+        }
+
+        function deleteCard() {
+            if(confirm("删除?")) { appData.grid[activeSlotIndex] = null; saveToCloud(); renderAll(); closeModal('cardModal'); }
+        }
+
+        async function uploadFileToGitHub(inputId, progressId) {
+            const input = document.getElementById(inputId);
+            if(!input.files || !input.files[0]) return null;
+            const file = input.files[0];
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = async (e) => {
+                    const b64 = e.target.result.split(',')[1];
+                    const path = `uploads/${Date.now()}_${file.name}`;
+                    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
+                    if(progressId) document.getElementById(progressId).style.display = 'block';
+                    try {
+                        const res = await fetch(url, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: 'upload', content: b64 })
+                        });
+                        const data = await res.json();
+                        resolve(data.content.download_url);
+                    } catch(err) { alert("上传失败"); resolve(null); }
+                };
+                reader.readAsDataURL(file);
             });
-        });
+        }
 
-        // 启动
+        function updateColPreview(val) { document.getElementById('colVal').innerText = val; }
+        function updateTotalPreview(val) { document.getElementById('gridTotalVal').innerText = val; }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function setupEvents() {
+            document.querySelectorAll('.modal-overlay').forEach(el => {
+                el.addEventListener('click', (e) => { if(e.target===el) el.classList.remove('active'); });
+            });
+        }
+
         init();
     </script>
 </body>
-
 </html>
