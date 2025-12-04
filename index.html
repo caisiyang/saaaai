@@ -35,21 +35,36 @@
         ::-webkit-scrollbar { width: 0px; height: 0px; }
 
         body {
-            background-color: var(--bg-color);
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+           /* 移除原来的 background 属性，只保留基本布局 */
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding-top: 30px;
+            padding-top: 40px;
             overflow-x: hidden;
-            /* 允许页面滚动，但在管理模式下我们会禁止卡片区域的默认滚动 */
-            overscroll-behavior-y: none; 
-            transition: background-image 0.5s ease;
+            overscroll-behavior-y: none;
+            position: relative; /* 关键 */
+        }
+
+        /* 新增：一个专门负责显示背景图的固定层 */
+        body::before {
+            content: '';
+            position: fixed; /* 核心：强制固定，不随滚动条移动 */
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            z-index: -1; /* 放在最底层 */
+            
+            /* 这里使用 CSS 变量来接收 JS 传过来的图片 */
+            background-color: var(--current-bg-color);
+            background-image: var(--current-bg-image);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease, background-color 0.5s ease;
         }
 
         .app-container {
@@ -527,16 +542,19 @@
 
         // ================= 渲染系统 =================
         function applyStyles() {
+            // 1. 设置背景 (修改 CSS 变量，而不是直接改 body 样式)
             if (appData.config.bgImage && appData.config.bgImage.trim() !== "") {
-                document.body.style.backgroundImage = `url('${appData.config.bgImage}')`;
+                document.body.style.setProperty('--current-bg-image', `url('${appData.config.bgImage}')`);
+                document.body.style.setProperty('--current-bg-color', 'transparent');
             } else {
-                document.body.style.backgroundImage = 'none';
-                document.body.style.backgroundColor = appData.config.bgColor || "#3a2e2e";
+                document.body.style.setProperty('--current-bg-image', 'none');
+                document.body.style.setProperty('--current-bg-color', appData.config.bgColor || "#3a2e2e");
             }
             
-            // 设置列数
+            // 2. 设置列数
             document.getElementById('gridSystem').style.gridTemplateColumns = `repeat(${appData.config.gridColumns || 3}, 1fr)`;
             
+            // 3. 设置风格类
             document.body.classList.remove('style-white', 'style-dark', 'no-border');
             if (appData.config.cardStyle === 'white') document.body.classList.add('style-white');
             if (appData.config.cardStyle === 'dark') document.body.classList.add('style-dark');
