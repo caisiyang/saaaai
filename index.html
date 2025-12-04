@@ -457,10 +457,12 @@
             // 绑定到 body 或者特定区域，防止有些布局挡住
             document.addEventListener('click', (e) => {
                 // 只有点击页面底部 10% 的区域才算暗门，防止误触
-                if (e.clientY > window.innerHeight * 0.9) {
+                // 修改：点击页面下半部分 (50%) 即可触发，面积更大
+                if (e.clientY > window.innerHeight * 0.5) {
                     clickCount++;
                     clearTimeout(timer);
-                    timer = setTimeout(() => clickCount = 0, 1000);
+                    // 修改：放宽时间限制到 2秒，防止手速慢断掉
+                    timer = setTimeout(() => clickCount = 0, 2000);
                     if (clickCount === 5) {
                         enterAdminFlow();
                         clickCount = 0;
