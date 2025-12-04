@@ -8,11 +8,14 @@
     <style>
         /* ================= 基础变量 ================= */
         :root {
-            --bg-color: #3a2e2e;
+            /* 这些变量会被 JS 动态覆盖 */
+            --current-bg-image: none;
+            --current-bg-color: #3a2e2e;
+            
             --text-main: #fff;
             --text-sub: rgba(255, 255, 255, 0.7);
             
-            /* 默认风格 */
+            /* 默认风格：透明毛玻璃 */
             --card-bg: rgba(255, 255, 255, 0.1);
             --card-border: 1px solid rgba(255, 255, 255, 0.15);
             --card-blur: 25px;
@@ -20,45 +23,41 @@
             --slot-border: 2px dashed rgba(255, 255, 255, 0.15);
             --modal-bg: rgba(30, 30, 30, 0.9);
             --accent: #0a84ff;
-            --radius-card: 20px;
-            --gap-size: 12px; /* 稍微减小间距以适应手机 */
+            --radius-card: 24px;
+            --gap-size: 15px;
         }
 
         /* 样式变体 */
         body.style-dark { --card-bg: rgba(0, 0, 0, 0.5); --text-main: #fff; }
-        body.style-white { --card-bg: rgba(255, 255, 255, 0.8); --text-main: #000; --text-sub: rgba(0,0,0,0.6); --card-border: 1px solid rgba(0,0,0,0.1); }
+        body.style-white { --card-bg: rgba(255, 255, 255, 0.7); --text-main: #000; --text-sub: rgba(0,0,0,0.6); --card-border: 1px solid rgba(255,255,255,0.6); }
         body.no-border { --card-border: none; }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        /* 滚动条隐藏但保留功能 */
+        /* 全局滚动条美化 */
         ::-webkit-scrollbar { width: 0px; height: 0px; }
 
         body {
-           /* 移除原来的 background 属性，只保留基本布局 */
+            /* 移除 body 上的 background，改用伪元素 */
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding-top: 40px;
+            /* 留出顶部空间给吸顶栏 */
+            padding-top: 10px; 
             overflow-x: hidden;
             overscroll-behavior-y: none;
-            position: relative; /* 关键 */
+            position: relative;
         }
 
-        /* 新增：一个专门负责显示背景图的固定层 */
+        /* --- 核心修复：手机端背景固定不抖动 --- */
         body::before {
             content: '';
-            position: fixed; /* 核心：强制固定，不随滚动条移动 */
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            z-index: -1; /* 放在最底层 */
-            
-            /* 这里使用 CSS 变量来接收 JS 传过来的图片 */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
             background-color: var(--current-bg-color);
             background-image: var(--current-bg-image);
             background-size: cover;
@@ -70,45 +69,55 @@
         .app-container {
             width: 100%;
             max-width: 600px;
-            padding: 10px; /* 手机端减小边距 */
+            padding: 0 20px; /* 上下padding由header处理 */
             display: flex;
             flex-direction: column;
             position: relative;
             padding-bottom: 120px;
         }
 
-        @media (min-width: 600px) {
-            .app-container { padding: 20px; }
-            :root { --gap-size: 15px; --radius-card: 24px; }
-        }
-
         /* --- 管理员控制条 --- */
         .admin-controls {
-            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 2000; display: flex; gap: 10px; pointer-events: none;
         }
         .admin-btn {
-            background: var(--accent); color: white; padding: 8px 20px;
-            border-radius: 30px; font-size: 0.85rem; font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer;
+            background: var(--accent); color: white; padding: 10px 24px;
+            border-radius: 30px; font-size: 0.9rem; font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); pointer-events: auto; cursor: pointer;
             border: none; backdrop-filter: blur(10px);
         }
-        .admin-btn.exit { background: rgba(0,0,0,0.6); }
+        .admin-btn.exit { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); }
 
-        /* --- 头部 --- */
+        /* --- 头部吸顶区域 (Sticky Header) --- */
         .header-area {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; padding: 0 2px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            /* 吸顶核心 */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            
+            /* 视觉调整 */
+            padding: 20px 5px 15px 5px; /* 上边距大一点，给刘海留位置 */
+            margin-bottom: 10px;
+            
+            /* 为了防止背景太乱，吸顶区域后面加个渐变遮罩 */
+            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
         }
 
+        /* 个人信息条 */
         .profile-bar {
             flex: 1; height: 72px;
             background: var(--card-bg);
             backdrop-filter: blur(var(--card-blur)); -webkit-backdrop-filter: blur(var(--card-blur));
             border: var(--card-border); border-radius: 50px;
-            display: flex; align-items: center; padding: 0 10px;
-            margin-right: 10px; user-select: none;
+            display: flex; align-items: center; padding: 0 12px;
+            margin-right: 15px; user-select: none;
             transition: transform 0.1s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .avatar {
@@ -118,9 +127,9 @@
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .info { margin-left: 12px; flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+        .info { margin-left: 15px; flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
         .name { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
-        .bio { font-size: 0.8rem; color: var(--text-sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bio { font-size: 0.8rem; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .settings-btn {
             width: 50px; height: 50px; border-radius: 50%;
@@ -128,54 +137,37 @@
             border: var(--card-border); color: var(--text-main);
             display: flex; justify-content: center; align-items: center;
             cursor: pointer; font-size: 1.3rem; transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         .settings-btn:active { transform: scale(0.9); }
 
-        /* --- 网格系统 (核心修复) --- */
+        /* --- 网格系统 --- */
         .grid-system {
             display: grid;
-            /* 这里的列数由 JS 动态写入内联样式 */
-            /* 关键：行高自动，基于 aspect-ratio 撑开 */
-            grid-auto-rows: auto; 
+            grid-template-columns: repeat(3, 1fr); /* JS控制 */
+            grid-auto-rows: minmax(100px, auto);
             gap: var(--gap-size);
             position: relative;
         }
 
         .grid-slot {
-            position: relative;
+            aspect-ratio: 1/1;
             border-radius: var(--radius-card);
-            /* 默认 1x1 的格子负责撑开行高 */
-            aspect-ratio: 1/1; 
+            position: relative;
         }
         
-        /* 跨格的 slot 不需要 aspect-ratio，它们跟随行高，只负责横向跨越 */
-        .grid-slot.span-h2, .grid-slot.span-h3, .grid-slot.span-h4, .grid-slot.span-h5 {
-            aspect-ratio: auto;
-            height: 100%; /* 填满行高 */
-        }
-        
-        .grid-slot.span-h2 { grid-column: span 2; }
-        .grid-slot.span-h3 { grid-column: span 3; }
-        .grid-slot.span-h4 { grid-column: span 4; }
-        .grid-slot.span-h5 { grid-column: span 5; }
-        
-        /* 纵向跨格 (2x2) - 高度翻倍加间距 */
-        .grid-slot.span-v2 { 
-            grid-row: span 2; 
-            aspect-ratio: auto; /* 高度由 grid track 决定 */
-        }
-
-        /* 空格子逻辑 */
+        /* 空格子：非管理员不可见但占位 (WYSIWYG) */
         .grid-slot.empty {
             border: var(--slot-border);
-            visibility: hidden; /* 默认不可见但占位 */
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; opacity: 0.4;
+            display: flex; visibility: hidden; 
+            justify-content: center; align-items: center;
+            cursor: pointer; opacity: 0.4; transition: opacity 0.2s;
         }
         .grid-slot.empty::after { content: "+"; font-size: 2rem; color: var(--text-main); }
         
-        /* 管理员模式下可见 */
+        /* 管理员模式：可见且可点击 */
         body.admin-mode .grid-slot.empty { visibility: visible; }
+        .grid-slot.empty:hover { opacity: 0.8; }
 
         /* --- 卡片核心 --- */
         .card {
@@ -185,52 +177,48 @@
             border: var(--card-border); border-radius: var(--radius-card);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; position: relative; z-index: 2; overflow: hidden;
-            /* 默认允许滚动 */
-            user-select: none; -webkit-user-select: none;
-            transition: transform 0.15s ease;
+            touch-action: pan-y; user-select: none; -webkit-user-select: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         
-        /* 管理模式下的卡片：禁止默认触摸操作（如滚动），以便 JS 接管拖拽 */
-        body.admin-mode .card {
-            touch-action: none; 
-            cursor: grab;
-        }
+        /* 管理模式下的卡片：禁止默认触摸操作（防滚动），JS接管拖拽 */
+        body.admin-mode .card { touch-action: none; cursor: grab; }
         
         .card:active { transform: scale(0.96); }
         
-        /* 拖拽状态 */
         .card.dragging-active {
             position: fixed; z-index: 9999; pointer-events: none;
             transform: scale(1.05) rotate(2deg); 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
             opacity: 0.95;
         }
         .card.dragging-placeholder { opacity: 0.2; background: rgba(0,0,0,0.1); border: 2px dashed rgba(255,255,255,0.2); }
 
-        /* 跨格卡片内部布局调整 */
-        .card.span-h { 
-            flex-direction: row; gap: 15px; padding: 0 20px; justify-content: flex-start; 
+        /* 跨格类 */
+        .grid-slot.span-h2 { grid-column: span 2; aspect-ratio: 2/1; }
+        .grid-slot.span-h3 { grid-column: span 3; aspect-ratio: 3/1; }
+        .grid-slot.span-h4 { grid-column: span 4; aspect-ratio: 4/1; }
+        .grid-slot.span-h5 { grid-column: span 5; aspect-ratio: 5/1; }
+        .grid-slot.span-v2 { grid-row: span 2; aspect-ratio: 1/2; }
+        
+        .card.span-h2, .card.span-h3, .card.span-h4, .card.span-h5 { 
+            flex-direction: row; gap: 20px; padding: 0 30px; justify-content: flex-start; 
         }
-        
-        /* 内容样式 - 响应式字体 */
-        /* 使用 container query 思想，卡片越小字越小 */
-        .card-icon { font-size: 1.8rem; margin-bottom: 8px; color: var(--text-main); pointer-events: none; }
-        .card-title { font-size: 0.75rem; color: var(--text-sub); pointer-events: none; font-weight: 500; }
-        .card-content { font-size: 0.9rem; color: var(--text-main); font-weight: 700; margin-top: 2px; display: none; pointer-events: none; word-break: break-all;}
-        
-        /* 横向卡片字体变大 */
-        .card.span-h .card-icon { font-size: 2rem; margin: 0; }
-        .card.span-h .card-text-box { text-align: left; overflow: hidden; }
-        .card.span-h .card-title { font-size: 0.85rem; }
-        .card.span-h .card-content { font-size: 1rem; }
+        .card.span-h2 .card-icon { font-size: 2.4rem; margin: 0; }
+        .card.span-h2 .card-text-box { text-align: left; }
 
+        /* 内容样式 */
+        .card-icon { font-size: 1.8rem; margin-bottom: 10px; color: var(--text-main); pointer-events: none; }
+        .card-title { font-size: 0.85rem; color: var(--text-sub); pointer-events: none; font-weight: 500; }
+        .card-content { font-size: 1rem; color: var(--text-main); font-weight: 700; margin-top: 4px; display: none; pointer-events: none; }
+        
         .card-bg-img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .card.type-image { padding: 0; border: none; }
         
         .card.type-weixin .card-content, .card.type-text .card-content { display: block; }
-        .card.type-weixin .card-icon { font-size: 1.5rem; margin-bottom: 4px; }
+        .card.type-weixin .card-icon { font-size: 1.6rem; margin-bottom: 6px; }
 
-        /* 二维码遮罩 */
+        /* 二维码遮罩 (微信/打赏) */
         .qr-overlay {
             position: absolute; inset: 0; background: #fff;
             display: none; justify-content: center; align-items: center;
@@ -242,7 +230,7 @@
 
         /* 编辑按钮 */
         .card-edit-btn {
-            position: absolute; top: 6px; right: 6px; width: 28px; height: 28px;
+            position: absolute; top: 8px; right: 8px; width: 30px; height: 30px;
             background: rgba(0,0,0,0.6); border-radius: 50%; color: #fff;
             display: none; justify-content: center; align-items: center;
             font-size: 0.8rem; z-index: 20; cursor: pointer; backdrop-filter: blur(5px);
@@ -260,7 +248,7 @@
         .modal-box {
             background: var(--modal-bg); width: 90%; max-width: 380px;
             border-radius: 28px; padding: 25px; border: 1px solid rgba(255,255,255,0.15);
-            max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
+            max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
             color: #fff; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
         
@@ -277,6 +265,7 @@
             transition: background 0.2s;
         }
         .form-input:focus, .form-select:focus { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+        
         .form-select option { background-color: #222; color: #fff; padding: 10px; }
         
         .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 5px; border-radius: 2px; display: none; }
@@ -287,6 +276,7 @@
         .btn-danger { background: rgba(255, 69, 58, 0.2); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); }
         .btn-text { background: transparent; color: rgba(255,255,255,0.5); padding: 10px; font-size: 0.9rem; }
         
+        /* 滑块美化 */
         input[type=range] { -webkit-appearance: none; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; background: #fff; border-radius: 50%; cursor: pointer; margin-top: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
     </style>
@@ -299,7 +289,7 @@
     </div>
 
     <div class="app-container">
-        <!-- 头部 -->
+        <!-- 头部吸顶区域 -->
         <div class="header-area">
             <div class="profile-bar">
                 <div class="avatar"><img src="" id="displayAvatar"></div>
@@ -324,7 +314,7 @@
                 <label class="form-label">功能类型</label>
                 <select id="cardType" class="form-select" onchange="toggleCardInputs()">
                     <option value="link">链接跳转</option>
-                    <option value="weixin">微信 (支持二维码)</option>
+                    <option value="weixin">微信 (翻转二维码)</option>
                     <option value="coffee">打赏/Buy Me a Coffee</option>
                     <option value="image">纯图片</option>
                     <option value="location">地理位置</option>
@@ -348,11 +338,11 @@
                 <label class="form-label">卡片尺寸</label>
                 <select id="cardSpan" class="form-select">
                     <option value="1x1">1x1 (正方形)</option>
-                    <option value="h2">横跨 2格</option>
-                    <option value="h3">横跨 3格</option>
-                    <option value="h4">横跨 4格</option>
-                    <option value="h5">横跨 5格</option>
-                    <option value="v2">纵向 2格</option>
+                    <option value="h2">2x1 (横向)</option>
+                    <option value="h3">3x1 (横向)</option>
+                    <option value="h4">4x1 (横向)</option>
+                    <option value="h5">5x1 (横向)</option>
+                    <option value="v2">1x2 (纵向)</option>
                 </select>
             </div>
 
@@ -367,14 +357,14 @@
             </div>
 
             <div class="form-group" id="inputImageGroup" style="display:none;">
-                <label class="form-label">上传图片</label>
+                <label class="form-label">上传展示图片</label>
                 <input type="file" id="cardImageFile" accept="image/*" class="form-input">
                 <div class="progress-bar" id="imgProgress"><div class="progress-fill"></div></div>
                 <input type="hidden" id="cardImageUrl">
             </div>
 
             <div class="form-group" id="inputQrGroup" style="display:none;">
-                <label class="form-label">上传二维码</label>
+                <label class="form-label">上传二维码 (点击卡片显示)</label>
                 <input type="file" id="cardQrFile" accept="image/*" class="form-input">
                 <div class="progress-bar" id="qrProgress"><div class="progress-fill"></div></div>
                 <input type="hidden" id="cardQrUrl">
@@ -407,7 +397,7 @@
             <div class="modal-section-title">外观风格</div>
             <div class="form-group">
                 <select id="styleSelect" class="form-select">
-                    <option value="transparent">透明毛玻璃</option>
+                    <option value="transparent">透明毛玻璃 (推荐)</option>
                     <option value="dark">深色遮罩</option>
                     <option value="white">浅色遮罩</option>
                 </select>
@@ -456,7 +446,14 @@
 
         // ================= 状态 =================
         let appData = {
-            config: { gridColumns: 3, gridSize: 15, bgImage: "", bgColor: "#3a2e2e", cardStyle: "transparent", hideBorder: false },
+            config: { 
+                gridColumns: 3, 
+                gridSize: 15, 
+                bgImage: "",
+                bgColor: "#3a2e2e",
+                cardStyle: "transparent", 
+                hideBorder: false 
+            },
             profile: { name: "加载中...", bio: "...", avatar: "" },
             grid: Array(15).fill(null)
         };
@@ -465,7 +462,6 @@
         let isAdmin = false;
         let activeSlotIndex = -1;
         
-        // 拖拽变量
         let isDragging = false;
         let dragStartIndex = -1;
         let dragGhost = null;
@@ -529,7 +525,7 @@
         }
 
         async function saveToCloud() {
-            localStorage.setItem('myHomeBackup', JSON.stringify(appData)); // 立即存本地
+            localStorage.setItem('myHomeBackup', JSON.stringify(appData));
             if (!isAdmin || !githubToken) return;
             try {
                 await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -542,7 +538,7 @@
 
         // ================= 渲染系统 =================
         function applyStyles() {
-            // 1. 设置背景 (修改 CSS 变量，而不是直接改 body 样式)
+            // 背景应用到伪元素
             if (appData.config.bgImage && appData.config.bgImage.trim() !== "") {
                 document.body.style.setProperty('--current-bg-image', `url('${appData.config.bgImage}')`);
                 document.body.style.setProperty('--current-bg-color', 'transparent');
@@ -551,10 +547,8 @@
                 document.body.style.setProperty('--current-bg-color', appData.config.bgColor || "#3a2e2e");
             }
             
-            // 2. 设置列数
             document.getElementById('gridSystem').style.gridTemplateColumns = `repeat(${appData.config.gridColumns || 3}, 1fr)`;
             
-            // 3. 设置风格类
             document.body.classList.remove('style-white', 'style-dark', 'no-border');
             if (appData.config.cardStyle === 'white') document.body.classList.add('style-white');
             if (appData.config.cardStyle === 'dark') document.body.classList.add('style-dark');
@@ -575,15 +569,12 @@
                 slot.dataset.index = index;
 
                 if (item) {
-                    // 添加跨格类，横向跨格卡片会自动变成 flex-row 布局
-                    if (item.span && item.span !== '1x1') {
-                        slot.classList.add(`span-${item.span}`);
-                    }
+                    if (item.span) slot.classList.add(`span-${item.span}`);
                     
                     const card = document.createElement('div');
-                    // 标记是否为横向长卡片
-                    const isHorizontal = item.span && item.span.startsWith('h');
-                    card.className = `card type-${item.type} ${item.span ? `span-${item.span}` : ''} ${isHorizontal ? 'span-h' : ''}`;
+                    card.className = `card type-${item.type} ${item.span ? `span-${item.span}` : ''}`;
+                    // 检测是否横向
+                    if(item.span && item.span.startsWith('h')) card.classList.add('span-h');
                     
                     let html = '';
                     if ((item.type === 'weixin' || item.type === 'coffee') && item.qrCode) {
@@ -642,7 +633,7 @@
                 } else {
                     if(item.type === 'weixin') {
                         navigator.clipboard.writeText(item.content);
-                        alert("已复制: " + item.content);
+                        alert("已复制微信号: " + item.content);
                     } else {
                         if(item.content.startsWith('http')) window.open(item.content, '_blank');
                     }
@@ -660,7 +651,7 @@
             }
         }
 
-        // ================= 拖拽逻辑 =================
+        // ================= 拖拽逻辑 (立即更新缓存) =================
         function startDrag(e, index, cardEl, isTouch) {
             if (e.target.closest('.card-edit-btn')) return;
             isDragging = true; dragStartIndex = index;
@@ -723,6 +714,8 @@
                     const temp = appData.grid[dragStartIndex];
                     appData.grid[dragStartIndex] = appData.grid[targetIndex];
                     appData.grid[targetIndex] = temp;
+                    // 立即保存本地并渲染
+                    localStorage.setItem('myHomeBackup', JSON.stringify(appData));
                     renderAll();
                     saveToCloud(); 
                     return;
@@ -884,26 +877,38 @@
             if(confirm("删除?")) { appData.grid[activeSlotIndex] = null; saveToCloud(); renderAll(); closeModal('cardModal'); }
         }
 
+        // ================= GitHub Upload (增强版) =================
         async function uploadFileToGitHub(inputId, progressId) {
             const input = document.getElementById(inputId);
             if(!input.files || !input.files[0]) return null;
             const file = input.files[0];
+            
+            if (!githubToken) { alert("Token missing!"); return null; }
+
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
                 reader.onload = async (e) => {
                     const b64 = e.target.result.split(',')[1];
-                    const path = `uploads/${Date.now()}_${file.name}`;
+                    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_'); 
+                    const path = `uploads/${Date.now()}_${safeName}`;
                     const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
+                    
                     if(progressId) document.getElementById(progressId).style.display = 'block';
+                    
                     try {
                         const res = await fetch(url, {
                             method: 'PUT',
                             headers: { 'Authorization': `token ${githubToken}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ message: 'upload', content: b64 })
+                            body: JSON.stringify({ message: 'upload via web', content: b64 })
                         });
+                        
+                        if (!res.ok) throw new Error(res.status);
                         const data = await res.json();
                         resolve(data.content.download_url);
-                    } catch(err) { alert("上传失败"); resolve(null); }
+                    } catch(err) {
+                        alert("上传失败: " + err.message); 
+                        resolve(null); 
+                    }
                 };
                 reader.readAsDataURL(file);
             });
